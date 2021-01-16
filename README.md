@@ -1,10 +1,10 @@
 Gotify Plugin for Kanboard
 ===========================
-*(Based on Hipchat, Telegram and [Signal](https://github.com/stratmaster/kanboard-plugin-signal) Plugin)*
+*(Based on Hipchat, Telegram and [Signal](https://github.com/bhopmann/kanboard-plugin-signal) Plugin)*
 
 Receive Kanboard notifications on [Gotify](https://gotify.net/).
 
-Developed using [Kanboard](https://kanboard.org) Version 1.2.14
+Developed using [Kanboard](https://kanboard.org) Version 1.2.18
 
 Author
 ------
@@ -59,3 +59,4 @@ Troubleshooting
 
 - Enable the PHP debug mode
 - All errors are recorded in the logs
+- Enable verbose mode in file `plugins/Gotify/Notification/Gotify.php` (`$gotify_verbose = true;`)

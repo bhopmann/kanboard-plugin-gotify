@@ -40,12 +40,12 @@ class Plugin extends Base
 
     public function getPluginVersion()
     {
-        return '1.0.0';
+        return '1.1.0';
     }
 
     public function getPluginHomepage()
     {
-        return 'https://github.com/stratmaster/kanboard-plugin-gotify';
+        return 'https://github.com/bhopmann/kanboard-plugin-gotify';
     }
 
     public function getCompatibleVersion()

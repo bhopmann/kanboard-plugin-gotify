@@ -2,12 +2,15 @@
 
 namespace Kanboard\Plugin\Gotify\Notification;
 
+require_once(__DIR__.'/../vendor/autoload.php');
+
 use Kanboard\Core\Base;
 use Kanboard\Core\Notification\NotificationInterface;
 use Kanboard\Model\TaskModel;
 use Kanboard\Model\SubtaskModel;
 use Kanboard\Model\CommentModel;
 use Kanboard\Model\TaskFileModel;
+use League\HTMLToMarkdown\HtmlConverter;
 
 /**
  * Gotify Notification
@@ -26,30 +29,29 @@ class Gotify extends Base implements NotificationInterface
      *
      * @access public
      * @param  array     $user
-     * @param  string    $eventName
-     * @param  array     $eventData
+     * @param  string    $event_name
+     * @param  array     $event_data
      */
-    public function notifyUser(array $user, $eventName, array $eventData)
+    public function notifyUser(array $user, $event_name, array $event_data)
     {
         $gotify_url = $this->userMetadataModel->get($user['id'], 'gotify_url', $this->configModel->get('gotify_url'));
         $gotify_token = $this->userMetadataModel->get($user['id'], 'gotify_token', $this->configModel->get('gotify_token'));
         $gotify_priority = $this->userMetadataModel->get($user['id'], 'gotify_priority', $this->configModel->get('gotify_priority'));
 
-
         if (! empty($gotify_url) and ! empty($gotify_token))
         {
-            if ($eventName === TaskModel::EVENT_OVERDUE)
+            if ($event_name === TaskModel::EVENT_OVERDUE)
             {
-                foreach ($eventData['tasks'] as $task)
+                foreach ($event_data['tasks'] as $task)
                 {
                     $project = $this->projectModel->getById($task['project_id']);
-                    $eventData['task'] = $task;
-                    $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $eventName, $eventData);
+                    $event_data['task'] = $task;
+                    $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $event_name, $event_data);
                 }
             } else
             {
-                $project = $this->projectModel->getById($eventData['task']['project_id']);
-                $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $eventName, $eventData);
+                $project = $this->projectModel->getById($event_data['task']['project_id']);
+                $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $event_name, $event_data);
             }
         }
     }
@@ -59,10 +61,10 @@ class Gotify extends Base implements NotificationInterface
      *
      * @access public
      * @param  array     $project
-     * @param  string    $eventName
-     * @param  array     $eventData
+     * @param  string    $event_name
+     * @param  array     $event_data
      */
-    public function notifyProject(array $project, $eventName, array $eventData)
+    public function notifyProject(array $project, $event_name, array $event_data)
     {
       $gotify_url = $this->projectMetadataModel->get($project['id'], 'gotify_url', $this->configModel->get('gotify_url'));
       $gotify_token = "-g".$this->projectMetadataModel->get($project['id'], 'gotify_token', $this->configModel->get('gotify_token'));
@@ -70,7 +72,7 @@ class Gotify extends Base implements NotificationInterface
 
         if (! empty($gotify_url) and ! empty($gotify_token))
         {
-            $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $eventName, $eventData);
+            $this->sendMessage($gotify_url, $gotify_token, $gotify_priority, $project, $event_name, $event_data);
         }
     }
 
@@ -82,31 +84,32 @@ class Gotify extends Base implements NotificationInterface
     * @param  string    $gotify_token
     * @param  string    $gotify_priority
     * @param  array     $project
-    * @param  string    $eventName
-    * @param  array     $eventData
+    * @param  string    $event_name
+    * @param  array     $event_data
     */
-    protected function sendMessage($gotify_url, $gotify_token, $gotify_priority, array $project, $eventName, array $eventData)
+    protected function sendMessage($gotify_url, $gotify_token, $gotify_priority, array $project, $event_name, array $event_data)
     {
-      // Get required data
+      // Change $gotify_verbose to true while debugging gotify
+      $gotify_verbose = false;
 
+      // Get required data
       if ($this->userSession->isLogged())
       {
           $author = $this->helper->user->getFullname();
-          $title = $this->notificationModel->getTitleWithAuthor($author, $eventName, $eventData);
+          $title = $this->notificationModel->getTitleWithAuthor($author, $event_name, $event_data);
       }
       else
       {
-          $title = $this->notificationModel->getTitleWithoutAuthor($eventName, $eventData);
+          $title = $this->notificationModel->getTitleWithoutAuthor($event_name, $event_data);
       }
 
-      $proj_name = isset($eventData['project_name']) ? $eventData['project_name'] : $eventData['task']['project_name'];
-      $task_title = $eventData['task']['title'];
-      $task_url = $this->helper->url->to('TaskViewController', 'show', array('task_id' => $eventData['task']['id'], 'project_id' => $project['id']), '', true);
+      $proj_name = isset($event_data['project_name']) ? $event_data['project_name'] : $event_data['task']['project_name'];
+      $task_title = $event_data['task']['title'];
+      $task_url = $this->helper->url->to('TaskViewController', 'show', array('task_id' => $event_data['task']['id'], 'project_id' => $project['id']), '', true);
 
       // Build message
 
       $message = "[".addslashes($proj_name)."]\n";
-      $message .= addslashes($title)."\n";
 
       // Add additional informations
 
@@ -114,9 +117,9 @@ class Gotify extends Base implements NotificationInterface
       $subtask_events = array(SubtaskModel::EVENT_CREATE, SubtaskModel::EVENT_UPDATE, SubtaskModel::EVENT_DELETE);
       $comment_events = array(CommentModel::EVENT_UPDATE, CommentModel::EVENT_CREATE, CommentModel::EVENT_DELETE, CommentModel::EVENT_USER_MENTION);
 
-      if (in_array($eventName, $subtask_events))  // For subtask events
+      if (in_array($event_name, $subtask_events))  // For subtask events
       {
-          $subtask_status = $eventData['subtask']['status'];
+          $subtask_status = $event_data['subtask']['status'];
           $subtask_symbol = '';
 
           if ($subtask_status == SubtaskModel::STATUS_DONE)
@@ -132,50 +135,53 @@ class Gotify extends Base implements NotificationInterface
               $subtask_symbol = '🕘 ';
           }
 
-          $message .= " ↳ ".$subtask_symbol . addslashes($eventData['subtask']['title'])."\n";
+          $message .= "\n<b>  ↳ ".$subtask_symbol.'</b> <em>"'.addslashes($event_data['subtask']['title']).'"</em>';
       }
 
-      elseif (in_array($eventName, $description_events))  // If description available
+      elseif (in_array($event_name, $description_events))  // If description available
       {
-          if ($eventData['task']['description'] != '')
+          if ($event_data['task']['description'] != '')
           {
-              $message .= "✏️ ".addslashes($eventData['task']['description'])."\n";
+              $message .= "\n✏️ ".'<em>"'.addslashes($event_data['task']['description']).'"</em>';
           }
       }
 
-      elseif (in_array($eventName, $comment_events))  // If comment available
+      elseif (in_array($event_name, $comment_events))  // If comment available
       {
-          $message .= "💬 ".addslashes($eventData['comment']['comment'])."\n";
+          $message .= "\n💬 ".'<em>"'.addslashes($event_data['comment']['comment']).'"</em>';
       }
 
       // Add URL
 
       if ($this->configModel->get('application_url') !== '')
       {
-          $message .= "📝 ".addslashes($task_title) . ": ".$task_url;
+          $message .= '📝 <a href="'.$task_url.'">'.addslashes($task_title).'</a>';
       }
       else
       {
           $message .= addslashes($task_title);
       }
 
+
       if (! empty($gotify_url) and ! empty($gotify_token))
       {
 
-  $data = [
-    #"title"=> "Hello World",
-    "message"=> "$message",
-    "priority"=> 5
-    #"extras" => [
-    #"client::display" => [
-    #    "contentType" => "text/markdown"
-    #]
-    #]
-];
+      $converter = new HtmlConverter();
 
-#$data_string = json_encode($data);
+      $task = $this->taskFinderModel->getDetails($event_data['task']['id']);
 
-$data_string = "{\"message\":".json_encode($message).",\"priority\":$gotify_priority}";
+        $data = [
+            "title"=> "[$proj_name] $title",
+            "message"=> $converter->convert($this->template->render('notification/task_create', array('task' => $task))),
+            "priority"=> intval($gotify_priority),
+            "extras" => [
+            "client::display" => [
+                "contentType" => "text/markdown"
+            ]
+            ]
+        ];
+
+$data_string = json_encode($data);
 
 $url = "$gotify_url/message?token=$gotify_token";
 
@@ -195,24 +201,25 @@ $code = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
 curl_close ($ch);
 
+
 switch ($code) {
-    case "200":
-        echo "<strong>Your Message was Submitted</strong>";
+      case "200":
+          if($gotify_verbose){ echo "Your Message was Submitted"; }
         break;
-    case "400":
-        echo "<strong>Bad Request</strong>";
+      case "400":
+        if($gotify_verbose){ echo "Bad Request"; }
         break;
-    case "401":
-        echo "<strong>Unauthorized Error - Invalid Token</strong>";
+      case "401":
+        if($gotify_verbose){ echo "Unauthorized Error - Invalid Token"; }
         break;
-    case "403":
-        echo "<strong>Forbidden</strong>";
+      case "403":
+        if($gotify_verbose){ echo "Forbidden"; }
         break;
-    case "404":
-        echo "<strong>API URL Not Found</strong>";
+      case "404":
+        if($gotify_verbose){ echo "API URL Not Found"; }
         break;
-    default:
-        echo "<strong>Hmm Something Went Wrong or HTTP Status Code is Missing</strong>";
+      default:
+        if($gotify_verbose){ echo "Hmm Something Went Wrong or HTTP Status Code is Missing"; }
 }
       }
     }

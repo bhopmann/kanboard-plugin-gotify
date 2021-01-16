@@ -15,7 +15,7 @@
     <?= $this->form->text('gotify_priority', $values) ?>
     <p class="form-help"><?= t('Gotify Priority') ?></p>
 
-    <p class="form-help"><a href="https://github.com/stratmaster/kanboard-plugin-gotify" target="_blank"><?= t('Help on Gotify integration') ?></a></p>
+    <p class="form-help"><a href="https://github.com/bhopmann/kanboard-plugin-gotify" target="_blank"><?= t('Help on Gotify integration') ?></a></p>
 
     <div class="form-actions">
         <input type="submit" value="<?= t('Save') ?>" class="btn btn-blue">

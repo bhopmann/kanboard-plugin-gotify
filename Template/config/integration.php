@@ -13,7 +13,7 @@
     <?= $this->form->text('gotify_priority', $values) ?>
     <p class="form-help"><?= t('Set Notification Priority') ?></p>
 
-    <p class="form-help"><a href="https://github.com/stratmaster/kanboard-plugin-gotify" target="_blank"><?= t('Help on Gotify integration') ?></a> | <a href="https://gotify.net" target="_blank"><?= t('Gotify website') ?></a></p>
+    <p class="form-help"><a href="https://github.com/bhopmann/kanboard-plugin-gotify" target="_blank"><?= t('Help on Gotify integration') ?></a> | <a href="https://gotify.net" target="_blank"><?= t('Gotify website') ?></a></p>
 
     <div class="form-actions">
         <input type="submit" value="<?= t('Save') ?>" class="btn btn-blue">
